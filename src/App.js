@@ -12,13 +12,24 @@ class App extends Component {
     };
   }
 
+  getGitHubApiUrl = (user, type) => {
+    const internalUser = user ? `/${user}` : "";
+    const internalType = type ? `/${type}` : "";
+    return `https://api.github.com/users${internalUser}${internalType}`;
+  };
+
   handleSearch = (e) => {
     const value = e.target.value;
     const keyCode = e.which || e.keyCode;
     const ENTER = 13;
+    const target = e.target;
+
+    //e.persist();
+
     if (keyCode === ENTER) {
+      target.disabled = true;
       ajax()
-        .get(`https://api.github.com/users/${value}`)
+        .get(this.getGitHubApiUrl(value))
         .then((res) => {
           this.setState({
             userInfo: {
@@ -29,29 +40,32 @@ class App extends Component {
               followers: res.followers,
               following: res.following,
             },
+            repos: [],
+            starred: [],
           });
-          // userInfo: {
-          //   userName: "Ricardo Rodrigues dos Santos",
-          //   photo: "https://avatars3.githubusercontent.com/u/43193614?v=4",
-          //   login: "ricardocaiuba",
-          //   repos: 12,
-          //   followers: 10,
-          //   following: 10,
-          // },
-          // repos: [
-          //   {
-          //     name: "Repositório",
-          //     link: "#",
-          //   },
-          // ],
-          // starred: [
-          //   {
-          //     name: "Repo",
-          //     link: "#",
-          //   },
-          // ],
+        })
+        .always(() => {
+          target.disabled = false;
         });
     }
+  };
+
+  getRepos = (type) => {
+    return (e) => {
+      const user = this.state.userInfo.login;
+      ajax()
+        .get(this.getGitHubApiUrl(user, type))
+        .then((res) => {
+          this.setState({
+            [type]: res.map((repo) => {
+              return {
+                name: repo.name,
+                link: repo.html_url,
+              };
+            }),
+          });
+        });
+    };
   };
 
   render() {
@@ -61,6 +75,8 @@ class App extends Component {
         repos={this.state.repos}
         starred={this.state.starred}
         handleSearch={this.handleSearch}
+        getRepos={this.getRepos("repos")}
+        getStarred={this.getRepos("starred")}
       />
     );
   }
